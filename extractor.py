@@ -67,7 +67,7 @@ def _tweet_extractor(keyword):
     api = __oauth_tw()
     search = keyword + " -filter:retweets"
     tweets = api.search_tweets(q=search,
-                               count=10,
+                               count=100,
                                lang='es')
     
     filename = 'tweets_for_{word}'.format(word=keyword)
@@ -125,13 +125,12 @@ def _close_connection(db):
 
 
 def main():
-        #keyword = input('Keyword: ')
+        keyword = input('Keyword: ')
 
-        #_tweet_extractor(keyword=keyword)
+        _tweet_extractor(keyword=keyword)
         logger.info("Extraction finished.")
 
         file_path = input('csv path:')
-        file_path = 'tweets_for_dota_2022_10_20.csv'
         tweets_df = _csv_to_df(file_path)
 
         tweets_df = _clean_tweets(tweets_df)
@@ -145,10 +144,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-        
-        
-
-
