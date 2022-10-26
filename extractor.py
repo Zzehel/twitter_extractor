@@ -1,4 +1,3 @@
-from ast import main
 import tweepy as tw
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -18,7 +17,9 @@ def __oauth_tw():
     __as = 'api_secrect'
     __tk = 'token'
     __ts = 'token_secrect'
+    __br = 'bearer_token'
 
+    """
     auth = tw.OAuth1UserHandler(
         __root[__ak],
         __root[__as],
@@ -26,9 +27,18 @@ def __oauth_tw():
         __root[__ts]
     )
     api = tw.API(auth)
+    """
+
+    client = tw.Client(bearer_token=__root[__br],
+                       consumer_key=__root[__ak],
+                       consumer_secret=__root[__as],
+                       access_token=__root[__tk],
+                       access_token_secret=__root[__ts])
+
     logger.info('OAuth done...')
 
-    return api
+    #return api
+    return client
 
 
 """CSV writer"""
@@ -39,15 +49,18 @@ def _save_tweets(filename,tweets):
                    'created_date',
                    'text',
                    'source',
-                   'in_reply_to_status_id',
+                   'in_reply_to_user_id',
                    'user_id',
                    'retweets',
+                   'likes',
                    'language']
     name = '{filename}_{date}.csv'.format(filename=filename,date=now)
     file = open(name,'a')
     csvWriter = csv.writer(file,delimiter=';')
     csvWriter.writerow(csv_headers)
 
+    """API v1 - csv writer with fields from api v1"""
+    """
     for tweet in tweets:
         csvWriter.writerow([tweet.id, 
                      tweet.created_at,
@@ -58,20 +71,60 @@ def _save_tweets(filename,tweets):
                      tweet.retweet_count,
                      tweet.lang
                      ])
+    """
+
+    """API v2 - csv writer with fields from api v2"""
+    for tweet in tweets:
+        csvWriter.writerow([tweet.id, 
+                     tweet.created_at,
+                     tweet.text.encode('utf-8'),
+                     tweet.source,
+                     tweet.in_reply_to_user_id,
+                     tweet.author_id,
+                     tweet.public_metrics['retweet_count'],
+                     tweet.public_metrics['like_count'],
+                     tweet.lang
+                     ])
     
 
 
 """extract tweets of the especify keyword"""
 def _tweet_extractor(keyword):
     logger.info('Extracting tweets ...')
-    api = __oauth_tw()
-    search = keyword + " -filter:retweets"
-    tweets = api.search_tweets(q=search,
-                               count=100,
-                               lang='es')
+    #api = __oauth_tw()
+    client = __oauth_tw()
+
+    """API v1 - query"""
+    # search = keyword + " -filter:retweets"
+
+    """API v2 - query"""
+    search = keyword + " -is:retweet"
+
+    """API v1 - search"""
+    #tweets = api.search_tweets(q=search,
+    #                           count=100,
+    #                           lang='es')
+
+    """API v2 - search"""
+    fields = ['public_metrics'
+              ,'id'
+              ,'created_at'
+              ,'text'
+              ,'source'
+              ,'in_reply_to_user_id'
+              ,'author_id'
+              ,'lang'
+              ]
+    tweets_data = client.search_recent_tweets(query=search,
+                               max_results=100,
+                               tweet_fields=fields
+                               )
+    tweets = tweets_data.data
     
     filename = 'tweets_for_{word}'.format(word=keyword)
+    
     _save_tweets(filename,tweets)
+
 
 """create dataframe from csv"""    
 def _csv_to_df(filename):
